@@ -1,0 +1,235 @@
+================================================================================
+  LV188 WEB APPLICATION VULNERABILITY SCANNER
+================================================================================
+  Target  : http://127.0.0.1:3000/
+  Scanned : 2026-04-24 16:05:51
+  Duration: 322.4s
+  URLs    : 25 crawled
+================================================================================
+
+  SUMMARY
+----------------------------------------
+  CRITICAL : 15
+  HIGH     : 1
+  MEDIUM   : 0
+  LOW      : 0
+  INFO     : 0
+  TOTAL    : 16
+
+  OWASP TOP 10 CLASSIFICATION
+----------------------------------------
+  [6] A03:2021 - Injection
+  [4] A01:2021 - Broken Access Control
+  [4] A05:2021 - Security Misconfiguration
+  [2] A10:2021 - Server-Side Request Forgery
+
+  DETAILED FINDINGS
+================================================================================
+
+[1] CRITICAL — RCE
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/index.php?id=1
+    Param    : id
+    Payload  : ; whoami
+    Evidence : root
+    Desc     : RCE: command output in response for param 'id'.
+    Fix      : Never pass user input to shell commands. Use safe APIs.
+--------------------------------------------------------------------------------
+
+[2] CRITICAL — RCE
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/page.php?page=home
+    Param    : page
+    Payload  : ; whoami
+    Evidence : root
+    Desc     : RCE: command output in response for param 'page'.
+    Fix      : Never pass user input to shell commands. Use safe APIs.
+--------------------------------------------------------------------------------
+
+[3] CRITICAL — RCE
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/view.php?file=index
+    Param    : file
+    Payload  : ; whoami
+    Evidence : root
+    Desc     : RCE: command output in response for param 'file'.
+    Fix      : Never pass user input to shell commands. Use safe APIs.
+--------------------------------------------------------------------------------
+
+[4] CRITICAL — LFI
+    OWASP    : A01:2021 - Broken Access Control
+    URL      : http://127.0.0.1:3000/index.php?id=1
+    Param    : id
+    Payload  : /proc/self/cmdline
+    Evidence : ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0p
+    Desc     : Local File Inclusion: parameter 'id' includes server-side files. Payload '/proc/self/cmdline' triggered a match.
+    Fix      : Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.
+--------------------------------------------------------------------------------
+
+[5] CRITICAL — LFI
+    OWASP    : A01:2021 - Broken Access Control
+    URL      : http://127.0.0.1:3000/page.php?page=home
+    Param    : page
+    Payload  : /proc/self/cmdline
+    Evidence : ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0p
+    Desc     : Local File Inclusion: parameter 'page' includes server-side files. Payload '/proc/self/cmdline' triggered a match.
+    Fix      : Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.
+--------------------------------------------------------------------------------
+
+[6] CRITICAL — LFI
+    OWASP    : A01:2021 - Broken Access Control
+    URL      : http://127.0.0.1:3000/view.php?file=index
+    Param    : file
+    Payload  : /proc/self/cmdline
+    Evidence : ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0p
+    Desc     : Local File Inclusion: parameter 'file' includes server-side files. Payload '/proc/self/cmdline' triggered a match.
+    Fix      : Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.
+--------------------------------------------------------------------------------
+
+[7] CRITICAL — SSTI
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/index.php?id=1
+    Param    : id
+    Payload  : {{7*7}}
+    Evidence : 49
+    Desc     : SSTI: template expression '{{7*7}}' evaluated in param 'id'.
+    Fix      : Never pass user input directly to template engines. Use sandboxed rendering.
+--------------------------------------------------------------------------------
+
+[8] CRITICAL — SSTI
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/page.php?page=home
+    Param    : page
+    Payload  : {{7*7}}
+    Evidence : 49
+    Desc     : SSTI: template expression '{{7*7}}' evaluated in param 'page'.
+    Fix      : Never pass user input directly to template engines. Use sandboxed rendering.
+--------------------------------------------------------------------------------
+
+[9] CRITICAL — SSTI
+    OWASP    : A03:2021 - Injection
+    URL      : http://127.0.0.1:3000/view.php?file=index
+    Param    : file
+    Payload  : {{7*7}}
+    Evidence : 49
+    Desc     : SSTI: template expression '{{7*7}}' evaluated in param 'file'.
+    Fix      : Never pass user input directly to template engines. Use sandboxed rendering.
+--------------------------------------------------------------------------------
+
+[10] CRITICAL — XXE
+    OWASP    : A05:2021 - Security Misconfiguration
+    URL      : http://127.0.0.1:3000/index.php?id=1
+    Param    : id
+    Payload  : <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><root>&xxe;</root>
+    Evidence : aphy bluegrey-lightgreen-theme">
+  <app-root></app-root>
+<link rel="modulepreload" href="chunk-24EZLZ4I.js"><link rel="modulepreload" href="chunk-T3PSKZ45.js"><link rel="modulepreload" href="chunk-4MI
+    Desc     : XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.
+    Fix      : Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.
+--------------------------------------------------------------------------------
+
+[11] CRITICAL — XXE
+    OWASP    : A05:2021 - Security Misconfiguration
+    URL      : http://127.0.0.1:3000/page.php?page=home
+    Param    : page
+    Payload  : <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><root>&xxe;</root>
+    Evidence : aphy bluegrey-lightgreen-theme">
+  <app-root></app-root>
+<link rel="modulepreload" href="chunk-24EZLZ4I.js"><link rel="modulepreload" href="chunk-T3PSKZ45.js"><link rel="modulepreload" href="chunk-4MI
+    Desc     : XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.
+    Fix      : Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.
+--------------------------------------------------------------------------------
+
+[12] CRITICAL — XXE
+    OWASP    : A05:2021 - Security Misconfiguration
+    URL      : http://127.0.0.1:3000/view.php?file=index
+    Param    : file
+    Payload  : <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><root>&xxe;</root>
+    Evidence : aphy bluegrey-lightgreen-theme">
+  <app-root></app-root>
+<link rel="modulepreload" href="chunk-24EZLZ4I.js"><link rel="modulepreload" href="chunk-T3PSKZ45.js"><link rel="modulepreload" href="chunk-4MI
+    Desc     : XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.
+    Fix      : Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.
+--------------------------------------------------------------------------------
+
+[13] CRITICAL — XXE
+    OWASP    : A05:2021 - Security Misconfiguration
+    URL      : http://127.0.0.1:3000/upload
+    Param    : body[application/xml]
+    Payload  : <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><root>&xxe;</root>
+    Evidence : aphy bluegrey-lightgreen-theme">
+  <app-root></app-root>
+<link rel="modulepreload" href="chunk-24EZLZ4I.js"><link rel="modulepreload" href="chunk-T3PSKZ45.js"><link rel="modulepreload" href="chunk-4MI
+    Desc     : XXE Injection via raw XML POST (PHP expect RCE). Content-Type: application/xml
+    Fix      : Disable external entity processing. Reject unexpected content types. Use allowlist-based XML parsing.
+--------------------------------------------------------------------------------
+
+[14] CRITICAL — SSRF
+    OWASP    : A10:2021 - Server-Side Request Forgery
+    URL      : http://127.0.0.1:3000/rest/products/search?q=
+    Param    : q
+    Payload  : dict://localhost:11211/stat
+    Evidence : {"status":"success","data":[]}
+    Desc     : SSRF: Parameter 'q' causes the server to make requests to internal resources. Target 'dict://localhost:11211/stat' returned sensitive data.
+    Fix      : Validate and sanitize all URL inputs. Implement an allowlist of permitted URLs. Block requests to internal IP ranges (RFC1918). Use a URL parser to detect and reject localhost/internal targets. Disable unused URL schemes (file://, dict://, gopher://).
+--------------------------------------------------------------------------------
+
+[15] CRITICAL — SSRF
+    OWASP    : A10:2021 - Server-Side Request Forgery
+    URL      : http://127.0.0.1:3000/view.php?file=index
+    Param    : file
+    Payload  : http://localhost/
+    Evidence : icense-Identifier: MIT
+  -->
+
+<!doctype html>
+<html lang="en" data-beasties-container>
+<head>
+  <meta charset="utf-8">
+  <title>OWASP Juice Shop</title>
+  <meta name="description" content="Probably th
+    Desc     : SSRF: Parameter 'file' causes the server to make requests to internal resources. Target 'http://localhost/' returned sensitive data.
+    Fix      : Validate and sanitize all URL inputs. Implement an allowlist of permitted URLs. Block requests to internal IP ranges (RFC1918). Use a URL parser to detect and reject localhost/internal targets. Disable unused URL schemes (file://, dict://, gopher://).
+--------------------------------------------------------------------------------
+
+[16] HIGH — IDOR
+    OWASP    : A01:2021 - Broken Access Control
+    URL      : http://127.0.0.1:3000/index.php?id=1
+    Param    : id
+    Payload  : 2
+    Evidence : ID=1 returns similar content as ID=2 (lengths: 75002 vs 75002)
+    Desc     : Potential IDOR: parameter 'id' may allow access to other users' data.
+    Fix      : Implement object-level authorization. Verify ownership on every resource access.
+--------------------------------------------------------------------------------
+
+  CRAWLED URLS
+----------------------------------------
+  http://127.0.0.1:3000/api/Products
+  http://127.0.0.1:3000/api/Users
+  http://127.0.0.1:3000/api/Feedbacks
+  http://127.0.0.1:3000/api/Complaints
+  http://127.0.0.1:3000/rest/user/whoami
+  http://127.0.0.1:3000/rest/products/search?q=
+  http://127.0.0.1:3000/api/SecurityQuestions
+  http://127.0.0.1:3000/search
+  http://127.0.0.1:3000/search.php
+  http://127.0.0.1:3000/query
+  http://127.0.0.1:3000/index.php?id=1
+  http://127.0.0.1:3000/page.php?page=home
+  http://127.0.0.1:3000/view.php?file=index
+  http://127.0.0.1:3000/admin
+  http://127.0.0.1:3000/admin/
+  http://127.0.0.1:3000/user
+  http://127.0.0.1:3000/profile
+  http://127.0.0.1:3000/settings
+  http://127.0.0.1:3000/upload
+  http://127.0.0.1:3000/file
+  http://127.0.0.1:3000/download
+  http://127.0.0.1:3000/api/v1/users
+  http://127.0.0.1:3000/api/v1/products
+  http://127.0.0.1:3000/api/users
+  http://127.0.0.1:3000/
+
+================================================================================
+  Generated by LV188 Scanner — Authorized testing only
+================================================================================

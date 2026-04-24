@@ -1,0 +1,81 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LVL99 — Vulnerable Target Environments
+# Run:  docker compose up -d
+# Stop: docker compose down
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── DVWA (Damn Vulnerable Web Application) ──────────────────────────────────
+  # URL:      http://localhost:8001
+  # Login:    admin / password
+  # Setup:    Visit http://localhost:8001/setup.php and click "Create / Reset Database"
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: lvl99_dvwa
+    restart: unless-stopped
+    ports:
+      - "8001:80"
+    environment:
+      - DB_SERVER=dvwa_db
+      - DB_PORT=3306
+      - DB_DATABASE=dvwa
+      - DB_USERNAME=dvwa
+      - DB_PASSWORD=p@ssw0rd
+    depends_on:
+      dvwa_db:
+        condition: service_healthy
+    networks:
+      - lvl99_net
+
+  dvwa_db:
+    image: mariadb:10.11
+    container_name: lvl99_dvwa_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "dvwa", "-pp@ssw0rd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lvl99_net
+
+  # ── OWASP Juice Shop ─────────────────────────────────────────────────────────
+  # URL:      http://localhost:8002
+  # Login:    admin@juice-sh.op / admin123 (or register new account)
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    container_name: lvl99_juiceshop
+    restart: unless-stopped
+    ports:
+      - "8002:3000"
+    networks:
+      - lvl99_net
+
+  # ── WebGoat ──────────────────────────────────────────────────────────────────
+  # URL:      http://localhost:8003/WebGoat
+  # Login:    guest / guest  (or register at /WebGoat/registration)
+  webgoat:
+    image: webgoat/goat-and-wolf:latest
+    container_name: lvl99_webgoat
+    restart: unless-stopped
+    ports:
+      - "8003:8080"
+      - "8004:9090"   # WebWolf
+    environment:
+      - WEBGOAT_PORT=8080
+      - WEBWOLF_PORT=9090
+    networks:
+      - lvl99_net
+
+networks:
+  lvl99_net:
+    driver: bridge
+    name: lvl99_network

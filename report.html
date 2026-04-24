@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LV188 Vulnerability Report — http://127.0.0.1:3000/</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --panel: #141417;
+    --border: #222228;
+    --text: #e0e0e8;
+    --muted: #888;
+    --accent: #e74c3c;
+    --accent2: #3498db;
+    --mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #0d0d0f 0%, #1a1020 100%); border-bottom: 1px solid #c0392b44; padding: 40px; }
+  .header-inner { max-width: 1400px; margin: 0 auto; }
+  .logo { font-family: var(--mono); color: #e74c3c; font-size: 11px; line-height: 1.2; white-space: pre; margin-bottom: 20px; opacity: 0.9; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .header-meta { color: var(--muted); font-size: 13px; display: flex; gap: 24px; flex-wrap: wrap; margin-top: 12px; }
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+  /* Layout */
+  .main { max-width: 1400px; margin: 0 auto; padding: 32px 40px; }
+
+  /* Summary cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .summary-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .summary-card .num { font-size: 36px; font-weight: 800; font-family: var(--mono); }
+  .summary-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .c-critical { color: #ff4444; border-color: #ff444433; }
+  .c-high     { color: #ff8800; border-color: #ff880033; }
+  .c-medium   { color: #ffcc00; border-color: #ffcc0033; }
+  .c-low      { color: #00cc44; border-color: #00cc4433; }
+  .c-info     { color: #4488ff; border-color: #4488ff33; }
+  .c-total    { color: #e0e0e8; }
+
+  /* Risk meter */
+  .risk-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; display: flex; align-items: center; gap: 24px; }
+  .risk-label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .risk-score { font-size: 42px; font-weight: 900; font-family: var(--mono); color: #c0392b; }
+  .risk-bar { flex: 1; height: 12px; background: #222; border-radius: 6px; overflow: hidden; }
+  .risk-bar-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c); width: 100%; border-radius: 6px; transition: width 1s; }
+  .risk-desc { font-size: 14px; color: var(--muted); }
+
+  /* Section */
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: '▶'; color: var(--accent); font-size: 10px; }
+
+  /* OWASP cards */
+  .owasp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .owasp-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .owasp-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .owasp-desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .owasp-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+  .stat-badge.critical { background: #c0392b22; color: #ff4444; border: 1px solid #c0392b44; }
+  .stat-badge.high { background: #e67e2222; color: #ff8800; border: 1px solid #e67e2244; }
+  .stat-badge.total { background: #ffffff11; color: #aaa; border: 1px solid #ffffff22; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #0a0a0c; }
+  th { padding: 12px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid #1a1a1f; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #ffffff04; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.5px; font-family: var(--mono); }
+  code { font-family: var(--mono); font-size: 12px; background: #ffffff0f; padding: 2px 6px; border-radius: 3px; }
+  pre { font-family: var(--mono); font-size: 12px; background: #0a0a0c; padding: 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; color: #a8d8a8; border: 1px solid var(--border); margin-top: 8px; max-height: 200px; overflow-y: auto; }
+  pre.evidence { color: #f0c674; }
+  details summary { cursor: pointer; color: var(--accent2); font-size: 12px; }
+  details summary:hover { text-decoration: underline; }
+  .url-link { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+  .owasp-cell { font-size: 11px; color: var(--muted); }
+  .remediation { font-size: 12px; color: #8bc34a; max-width: 280px; }
+
+  /* Crawled URLs */
+  .url-list { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; max-height: 300px; overflow-y: auto; }
+  .url-list .url-item { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 3px 0; border-bottom: 1px solid #1a1a1f; }
+  .url-list .url-item:last-child { border-bottom: none; }
+
+  /* Footer */
+  .footer { border-top: 1px solid var(--border); padding: 24px 40px; text-align: center; color: var(--muted); font-size: 12px; }
+
+  /* No vulns */
+  .no-vulns { background: #0a1a0a; border: 1px solid #00cc4433; border-radius: 10px; padding: 32px; text-align: center; color: #00cc44; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="header-inner">
+<pre class="logo">██╗     ██╗   ██╗ ██╗ █████╗  █████╗
+██║     ██║   ██║ ██║██╔══██╗██╔══██╗
+██║     ██║   ██║ ██║╚██████║╚██████║
+██║     ╚██╗ ██╔╝ ██║ ╚═══██║ ╚═══██║
+███████╗ ╚████╔╝  ██║ █████╔╝ █████╔╝
+╚══════╝  ╚═══╝   ╚═╝ ╚════╝  ╚════╝</pre>
+<h1>Web Application Vulnerability Report</h1>
+<div class="header-meta">
+  <span>🎯 Target: <strong>http://127.0.0.1:3000/</strong></span>
+  <span>📅 2026-04-24 16:05:51</span>
+  <span>⏱ Scan Duration: 322.4s</span>
+  <span>🔗 URLs Crawled: 25</span>
+  <span>⚠️ Vulnerabilities: 16</span>
+</div>
+</div>
+</div>
+
+<div class="main">
+
+  <!-- Risk Score -->
+  <div class="risk-panel">
+    <div>
+      <div class="risk-label">Overall Risk Score</div>
+      <div class="risk-score">100/100</div>
+      <div class="risk-label" style="color:#c0392b; font-weight:700">CRITICAL RISK</div>
+    </div>
+    <div style="flex:1">
+      <div class="risk-bar"><div class="risk-bar-fill"></div></div>
+      <div class="risk-desc" style="margin-top:8px">Based on 16 findings across 4 OWASP categories</div>
+    </div>
+  </div>
+
+  <!-- Severity Summary -->
+  <div class="section">
+    <div class="section-title">Vulnerability Summary</div>
+    <div class="summary-grid">
+      <div class="summary-card c-critical"><div class="num">15</div><div class="label">Critical</div></div>
+      <div class="summary-card c-high"><div class="num">1</div><div class="label">High</div></div>
+      <div class="summary-card c-medium"><div class="num">0</div><div class="label">Medium</div></div>
+      <div class="summary-card c-low"><div class="num">0</div><div class="label">Low</div></div>
+      <div class="summary-card c-info"><div class="num">0</div><div class="label">Info</div></div>
+      <div class="summary-card c-total"><div class="num">16</div><div class="label">Total</div></div>
+    </div>
+  </div>
+
+  <!-- OWASP Top 10 Breakdown -->
+  <div class="section">
+    <div class="section-title">OWASP Top 10 Classification</div>
+    <div class='owasp-grid'>
+            <div class="owasp-card">
+                <div class="owasp-title">A03:2021 - Injection</div>
+                <div class="owasp-desc">Injection flaws occur when untrusted data is sent to an interpreter as part of a command or query.</div>
+                <div class="owasp-stats">
+                    <span class="stat-badge critical">6 Critical</span>
+                    <span class="stat-badge high">0 High</span>
+                    <span class="stat-badge total">6 Total</span>
+                </div>
+            </div>
+            <div class="owasp-card">
+                <div class="owasp-title">A01:2021 - Broken Access Control</div>
+                <div class="owasp-desc">Access control enforces policy such that users cannot act outside of their intended permissions.</div>
+                <div class="owasp-stats">
+                    <span class="stat-badge critical">3 Critical</span>
+                    <span class="stat-badge high">1 High</span>
+                    <span class="stat-badge total">4 Total</span>
+                </div>
+            </div>
+            <div class="owasp-card">
+                <div class="owasp-title">A05:2021 - Security Misconfiguration</div>
+                <div class="owasp-desc">Insecure default configurations, incomplete configurations, or misconfigured HTTP headers.</div>
+                <div class="owasp-stats">
+                    <span class="stat-badge critical">4 Critical</span>
+                    <span class="stat-badge high">0 High</span>
+                    <span class="stat-badge total">4 Total</span>
+                </div>
+            </div>
+            <div class="owasp-card">
+                <div class="owasp-title">A10:2021 - Server-Side Request Forgery</div>
+                <div class="owasp-desc">SSRF flaws occur when a web application fetches a remote resource without validating the URL.</div>
+                <div class="owasp-stats">
+                    <span class="stat-badge critical">2 Critical</span>
+                    <span class="stat-badge high">0 High</span>
+                    <span class="stat-badge total">2 Total</span>
+                </div>
+            </div></div>
+  </div>
+
+  <!-- Findings Table -->
+  <div class="section">
+    <div class="section-title">Detailed Findings (16)</div>
+    
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Severity</th><th>Module</th><th>OWASP</th><th>URL</th>
+        <th>Parameter</th><th>Payload</th><th>Evidence</th>
+        <th>Description</th><th>Remediation</th>
+      </tr></thead>
+      <tbody>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>RCE</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank" class="url-link">http://127.0.0.1:3000/index.php?id=1</a></td>
+                <td><code>id</code></td>
+                <td><details><summary>View</summary><pre>; whoami</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">root</pre></details></td>
+                <td>RCE: command output in response for param 'id'.</td>
+                <td class="remediation">Never pass user input to shell commands. Use safe APIs.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>RCE</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/page.php?page=home" target="_blank" class="url-link">http://127.0.0.1:3000/page.php?page=home</a></td>
+                <td><code>page</code></td>
+                <td><details><summary>View</summary><pre>; whoami</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">root</pre></details></td>
+                <td>RCE: command output in response for param 'page'.</td>
+                <td class="remediation">Never pass user input to shell commands. Use safe APIs.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>RCE</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank" class="url-link">http://127.0.0.1:3000/view.php?file=index</a></td>
+                <td><code>file</code></td>
+                <td><details><summary>View</summary><pre>; whoami</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">root</pre></details></td>
+                <td>RCE: command output in response for param 'file'.</td>
+                <td class="remediation">Never pass user input to shell commands. Use safe APIs.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>LFI</td>
+                <td class="owasp-cell">A01:2021 - Broken Access Control</td>
+                <td><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank" class="url-link">http://127.0.0.1:3000/index.php?id=1</a></td>
+                <td><code>id</code></td>
+                <td><details><summary>View</summary><pre>/proc/self/cmdline</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0px 5px 5px -3px rgba(0, 0, 0, .2), 0px 8px 10px 1px</pre></details></td>
+                <td>Local File Inclusion: parameter 'id' includes server-side files. Payload '/proc/self/cmdline' triggered a match.</td>
+                <td class="remediation">Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>LFI</td>
+                <td class="owasp-cell">A01:2021 - Broken Access Control</td>
+                <td><a href="http://127.0.0.1:3000/page.php?page=home" target="_blank" class="url-link">http://127.0.0.1:3000/page.php?page=home</a></td>
+                <td><code>page</code></td>
+                <td><details><summary>View</summary><pre>/proc/self/cmdline</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0px 5px 5px -3px rgba(0, 0, 0, .2), 0px 8px 10px 1px</pre></details></td>
+                <td>Local File Inclusion: parameter 'page' includes server-side files. Payload '/proc/self/cmdline' triggered a match.</td>
+                <td class="remediation">Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>LFI</td>
+                <td class="owasp-cell">A01:2021 - Broken Access Control</td>
+                <td><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank" class="url-link">http://127.0.0.1:3000/view.php?file=index</a></td>
+                <td><code>file</code></td>
+                <td><details><summary>View</summary><pre>/proc/self/cmdline</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">ainer-background-color:white;--mat-tree-node-text-color:rgba(0, 0, 0, .87)}html{--mat-tree-node-min-height:48px}html{--mat-timepicker-container-shape:4px;--mat-timepicker-container-elevation-shadow:0px 5px 5px -3px rgba(0, 0, 0, .2), 0px 8px 10px 1px</pre></details></td>
+                <td>Local File Inclusion: parameter 'file' includes server-side files. Payload '/proc/self/cmdline' triggered a match.</td>
+                <td class="remediation">Never pass user-controlled data to file-include functions. Use a whitelist of allowed files. Disable allow_url_include in PHP. Implement proper input validation and path canonicalization.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>SSTI</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank" class="url-link">http://127.0.0.1:3000/index.php?id=1</a></td>
+                <td><code>id</code></td>
+                <td><details><summary>View</summary><pre>{{7*7}}</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">49</pre></details></td>
+                <td>SSTI: template expression '{{7*7}}' evaluated in param 'id'.</td>
+                <td class="remediation">Never pass user input directly to template engines. Use sandboxed rendering.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>SSTI</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/page.php?page=home" target="_blank" class="url-link">http://127.0.0.1:3000/page.php?page=home</a></td>
+                <td><code>page</code></td>
+                <td><details><summary>View</summary><pre>{{7*7}}</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">49</pre></details></td>
+                <td>SSTI: template expression '{{7*7}}' evaluated in param 'page'.</td>
+                <td class="remediation">Never pass user input directly to template engines. Use sandboxed rendering.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>SSTI</td>
+                <td class="owasp-cell">A03:2021 - Injection</td>
+                <td><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank" class="url-link">http://127.0.0.1:3000/view.php?file=index</a></td>
+                <td><code>file</code></td>
+                <td><details><summary>View</summary><pre>{{7*7}}</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">49</pre></details></td>
+                <td>SSTI: template expression '{{7*7}}' evaluated in param 'file'.</td>
+                <td class="remediation">Never pass user input directly to template engines. Use sandboxed rendering.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>XXE</td>
+                <td class="owasp-cell">A05:2021 - Security Misconfiguration</td>
+                <td><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank" class="url-link">http://127.0.0.1:3000/index.php?id=1</a></td>
+                <td><code>id</code></td>
+                <td><details><summary>View</summary><pre>&lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM &quot;expect://id&quot;&gt;]&gt;&lt;root&gt;&amp;xxe;&lt;/root&gt;</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">aphy bluegrey-lightgreen-theme&quot;&gt;
+  &lt;app-root&gt;&lt;/app-root&gt;
+&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-24EZLZ4I.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T3PSKZ45.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-4MIYPPGW.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-LHKS7QUN.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T</pre></details></td>
+                <td>XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.</td>
+                <td class="remediation">Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>XXE</td>
+                <td class="owasp-cell">A05:2021 - Security Misconfiguration</td>
+                <td><a href="http://127.0.0.1:3000/page.php?page=home" target="_blank" class="url-link">http://127.0.0.1:3000/page.php?page=home</a></td>
+                <td><code>page</code></td>
+                <td><details><summary>View</summary><pre>&lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM &quot;expect://id&quot;&gt;]&gt;&lt;root&gt;&amp;xxe;&lt;/root&gt;</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">aphy bluegrey-lightgreen-theme&quot;&gt;
+  &lt;app-root&gt;&lt;/app-root&gt;
+&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-24EZLZ4I.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T3PSKZ45.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-4MIYPPGW.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-LHKS7QUN.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T</pre></details></td>
+                <td>XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.</td>
+                <td class="remediation">Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>XXE</td>
+                <td class="owasp-cell">A05:2021 - Security Misconfiguration</td>
+                <td><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank" class="url-link">http://127.0.0.1:3000/view.php?file=index</a></td>
+                <td><code>file</code></td>
+                <td><details><summary>View</summary><pre>&lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM &quot;expect://id&quot;&gt;]&gt;&lt;root&gt;&amp;xxe;&lt;/root&gt;</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">aphy bluegrey-lightgreen-theme&quot;&gt;
+  &lt;app-root&gt;&lt;/app-root&gt;
+&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-24EZLZ4I.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T3PSKZ45.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-4MIYPPGW.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-LHKS7QUN.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T</pre></details></td>
+                <td>XXE Injection (PHP expect RCE): XML external entity processed. File content leaked.</td>
+                <td class="remediation">Disable external entity processing in your XML parser. Use a safe XML parsing library. Validate and sanitize all XML input. Implement XML schema validation.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>XXE</td>
+                <td class="owasp-cell">A05:2021 - Security Misconfiguration</td>
+                <td><a href="http://127.0.0.1:3000/upload" target="_blank" class="url-link">http://127.0.0.1:3000/upload</a></td>
+                <td><code>body[application/xml]</code></td>
+                <td><details><summary>View</summary><pre>&lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM &quot;expect://id&quot;&gt;]&gt;&lt;root&gt;&amp;xxe;&lt;/root&gt;</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">aphy bluegrey-lightgreen-theme&quot;&gt;
+  &lt;app-root&gt;&lt;/app-root&gt;
+&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-24EZLZ4I.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T3PSKZ45.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-4MIYPPGW.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-LHKS7QUN.js&quot;&gt;&lt;link rel=&quot;modulepreload&quot; href=&quot;chunk-T</pre></details></td>
+                <td>XXE Injection via raw XML POST (PHP expect RCE). Content-Type: application/xml</td>
+                <td class="remediation">Disable external entity processing. Reject unexpected content types. Use allowlist-based XML parsing.</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>SSRF</td>
+                <td class="owasp-cell">A10:2021 - Server-Side Request Forgery</td>
+                <td><a href="http://127.0.0.1:3000/rest/products/search?q=" target="_blank" class="url-link">http://127.0.0.1:3000/rest/products/search?q=</a></td>
+                <td><code>q</code></td>
+                <td><details><summary>View</summary><pre>dict://localhost:11211/stat</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">{&quot;status&quot;:&quot;success&quot;,&quot;data&quot;:[]}</pre></details></td>
+                <td>SSRF: Parameter 'q' causes the server to make requests to internal resources. Target 'dict://localhost:11211/stat' returned sensitive data.</td>
+                <td class="remediation">Validate and sanitize all URL inputs. Implement an allowlist of permitted URLs. Block requests to internal IP ranges (RFC1918). Use a URL parser to detect and reject localhost/internal targets. Disable unused URL schemes (file://, dict://, gopher://).</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff4444">CRITICAL</span></td>
+                <td>SSRF</td>
+                <td class="owasp-cell">A10:2021 - Server-Side Request Forgery</td>
+                <td><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank" class="url-link">http://127.0.0.1:3000/view.php?file=index</a></td>
+                <td><code>file</code></td>
+                <td><details><summary>View</summary><pre>http://localhost/</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">icense-Identifier: MIT
+  --&gt;
+
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-beasties-container&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;title&gt;OWASP Juice Shop&lt;/title&gt;
+  &lt;meta name=&quot;description&quot; content=&quot;Probably the most modern and sophisticated insecure web application&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=de</pre></details></td>
+                <td>SSRF: Parameter 'file' causes the server to make requests to internal resources. Target 'http://localhost/' returned sensitive data.</td>
+                <td class="remediation">Validate and sanitize all URL inputs. Implement an allowlist of permitted URLs. Block requests to internal IP ranges (RFC1918). Use a URL parser to detect and reject localhost/internal targets. Disable unused URL schemes (file://, dict://, gopher://).</td>
+            </tr>
+            <tr>
+                <td><span class="badge" style="background:#ff8800">HIGH</span></td>
+                <td>IDOR</td>
+                <td class="owasp-cell">A01:2021 - Broken Access Control</td>
+                <td><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank" class="url-link">http://127.0.0.1:3000/index.php?id=1</a></td>
+                <td><code>id</code></td>
+                <td><details><summary>View</summary><pre>2</pre></details></td>
+                <td><details><summary>View</summary><pre class="evidence">ID=1 returns similar content as ID=2 (lengths: 75002 vs 75002)</pre></details></td>
+                <td>Potential IDOR: parameter 'id' may allow access to other users' data.</td>
+                <td class="remediation">Implement object-level authorization. Verify ownership on every resource access.</td>
+            </tr></tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- Crawled URLs -->
+  <div class="section">
+    <div class="section-title">Crawled URLs (25)</div>
+    <div class="url-list">
+      <div class="url-item"><a href="http://127.0.0.1:3000/api/Products" target="_blank">http://127.0.0.1:3000/api/Products</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/Users" target="_blank">http://127.0.0.1:3000/api/Users</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/Feedbacks" target="_blank">http://127.0.0.1:3000/api/Feedbacks</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/Complaints" target="_blank">http://127.0.0.1:3000/api/Complaints</a></div><div class="url-item"><a href="http://127.0.0.1:3000/rest/user/whoami" target="_blank">http://127.0.0.1:3000/rest/user/whoami</a></div><div class="url-item"><a href="http://127.0.0.1:3000/rest/products/search?q=" target="_blank">http://127.0.0.1:3000/rest/products/search?q=</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/SecurityQuestions" target="_blank">http://127.0.0.1:3000/api/SecurityQuestions</a></div><div class="url-item"><a href="http://127.0.0.1:3000/search" target="_blank">http://127.0.0.1:3000/search</a></div><div class="url-item"><a href="http://127.0.0.1:3000/search.php" target="_blank">http://127.0.0.1:3000/search.php</a></div><div class="url-item"><a href="http://127.0.0.1:3000/query" target="_blank">http://127.0.0.1:3000/query</a></div><div class="url-item"><a href="http://127.0.0.1:3000/index.php?id=1" target="_blank">http://127.0.0.1:3000/index.php?id=1</a></div><div class="url-item"><a href="http://127.0.0.1:3000/page.php?page=home" target="_blank">http://127.0.0.1:3000/page.php?page=home</a></div><div class="url-item"><a href="http://127.0.0.1:3000/view.php?file=index" target="_blank">http://127.0.0.1:3000/view.php?file=index</a></div><div class="url-item"><a href="http://127.0.0.1:3000/admin" target="_blank">http://127.0.0.1:3000/admin</a></div><div class="url-item"><a href="http://127.0.0.1:3000/admin/" target="_blank">http://127.0.0.1:3000/admin/</a></div><div class="url-item"><a href="http://127.0.0.1:3000/user" target="_blank">http://127.0.0.1:3000/user</a></div><div class="url-item"><a href="http://127.0.0.1:3000/profile" target="_blank">http://127.0.0.1:3000/profile</a></div><div class="url-item"><a href="http://127.0.0.1:3000/settings" target="_blank">http://127.0.0.1:3000/settings</a></div><div class="url-item"><a href="http://127.0.0.1:3000/upload" target="_blank">http://127.0.0.1:3000/upload</a></div><div class="url-item"><a href="http://127.0.0.1:3000/file" target="_blank">http://127.0.0.1:3000/file</a></div><div class="url-item"><a href="http://127.0.0.1:3000/download" target="_blank">http://127.0.0.1:3000/download</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/v1/users" target="_blank">http://127.0.0.1:3000/api/v1/users</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/v1/products" target="_blank">http://127.0.0.1:3000/api/v1/products</a></div><div class="url-item"><a href="http://127.0.0.1:3000/api/users" target="_blank">http://127.0.0.1:3000/api/users</a></div><div class="url-item"><a href="http://127.0.0.1:3000/" target="_blank">http://127.0.0.1:3000/</a></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Generated by LV188 Scanner — For authorized testing on local environments only (DVWA, Juice Shop, WebGoat)
+  — 2026-04-24 16:05:51
+</div>
+
+</body>
+</html>
